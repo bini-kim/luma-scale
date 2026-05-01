@@ -106,7 +106,8 @@ button {
 .button,
 .segment,
 .tab,
-.icon-button {
+.icon-button,
+.lang-button {
   min-height: 40px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -127,7 +128,8 @@ button {
 .button:hover:not(:disabled),
 .segment:hover,
 .tab:hover,
-.icon-button:hover {
+.icon-button:hover,
+.lang-button:hover {
   border-color: var(--line-strong);
   transform: translateY(-1px);
 }
@@ -149,6 +151,31 @@ button {
 
 .button.secondary {
   background: #ffffff;
+}
+
+.language-toggle {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--soft);
+}
+
+.lang-button {
+  min-width: 42px;
+  min-height: 34px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.lang-button.active {
+  background: #ffffff;
+  color: var(--teal-dark);
+  box-shadow: 0 4px 10px rgba(30, 31, 35, 0.08);
 }
 
 .workspace {
@@ -512,6 +539,10 @@ input[type="range"] {
   .view-tabs,
   .zoom-actions {
     width: 100%;
+  }
+
+  .language-toggle {
+    justify-content: center;
   }
 
   .top-actions .button,

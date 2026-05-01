@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LumaScale 이미지 업스케일러</title>
+    <title>LumaScale Image Upscaler</title>
     <link rel="stylesheet" href="styles.css" />
     <script src="app.js" defer></script>
   </head>
@@ -14,34 +14,40 @@
           <div class="brand-mark">L</div>
           <div>
             <h1>LumaScale</h1>
-            <p>이미지 업스케일러</p>
+            <p data-i18n="appSubtitle">이미지 업스케일러</p>
           </div>
         </div>
         <div class="top-actions">
+          <div class="language-toggle" role="group" aria-label="Language">
+            <button class="lang-button active" type="button" data-locale="ko">KO</button>
+            <button class="lang-button" type="button" data-locale="en">EN</button>
+          </div>
           <input id="fileInput" type="file" accept="image/*" hidden />
-          <button class="button secondary" id="openButton" type="button">열기</button>
-          <button class="button primary" id="downloadButton" type="button" disabled>내보내기</button>
+          <button class="button secondary" id="openButton" type="button" data-i18n="open">열기</button>
+          <button class="button primary" id="downloadButton" type="button" disabled data-i18n="export">
+            내보내기
+          </button>
         </div>
       </header>
 
       <main class="workspace">
-        <aside class="controls" aria-label="업스케일 설정">
+        <aside class="controls" aria-label="업스케일 설정" data-i18n-aria-label="controlsAria">
           <section class="dropzone" id="dropZone" tabindex="0">
             <div class="drop-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" role="img">
                 <path d="M12 3v12m0-12 4 4m-4-4-4 4M5 15v4h14v-4" />
               </svg>
             </div>
-            <strong>이미지 놓기</strong>
+            <strong data-i18n="dropTitle">이미지 놓기</strong>
             <span>PNG, JPG, WebP</span>
           </section>
 
           <section class="control-group">
             <div class="label-row">
-              <label>출력 크기</label>
+              <label data-i18n="outputSize">출력 크기</label>
               <output id="scaleOutput">2x</output>
             </div>
-            <div class="segmented" role="group" aria-label="업스케일 배율">
+            <div class="segmented" role="group" aria-label="업스케일 배율" data-i18n-aria-label="scaleAria">
               <button type="button" class="segment active" data-scale="2">2x</button>
               <button type="button" class="segment" data-scale="3">3x</button>
               <button type="button" class="segment" data-scale="4">4x</button>
@@ -60,33 +66,33 @@
           </section>
 
           <section class="control-group">
-            <label for="methodSelect">방식</label>
+            <label for="methodSelect" data-i18n="method">방식</label>
             <select id="methodSelect">
-              <option value="detail">디테일 보정</option>
-              <option value="smooth">부드럽게</option>
-              <option value="pixel">픽셀 아트</option>
+              <option value="detail" data-i18n="detailMode">디테일 보정</option>
+              <option value="smooth" data-i18n="smoothMode">부드럽게</option>
+              <option value="pixel" data-i18n="pixelMode">픽셀 아트</option>
             </select>
           </section>
 
           <section class="control-group">
-            <label for="fitModeSelect">비율 처리</label>
+            <label for="fitModeSelect" data-i18n="fitMode">비율 처리</label>
             <select id="fitModeSelect">
-              <option value="cover">채우기</option>
-              <option value="contain">전체</option>
-              <option value="stretch">늘이기</option>
+              <option value="cover" data-i18n="coverMode">채우기</option>
+              <option value="contain" data-i18n="containMode">전체</option>
+              <option value="stretch" data-i18n="stretchMode">늘이기</option>
             </select>
           </section>
 
           <section class="control-group">
             <div class="label-row">
-              <label for="sharpnessRange">선명도</label>
+              <label for="sharpnessRange" data-i18n="sharpness">선명도</label>
               <output id="sharpnessOutput">42</output>
             </div>
             <input id="sharpnessRange" type="range" min="0" max="80" value="42" />
           </section>
 
           <section class="control-group">
-            <label for="formatSelect">파일 형식</label>
+            <label for="formatSelect" data-i18n="fileFormat">파일 형식</label>
             <select id="formatSelect">
               <option value="image/png">PNG</option>
               <option value="image/jpeg">JPEG</option>
@@ -96,47 +102,71 @@
 
           <section class="control-group">
             <div class="label-row">
-              <label for="qualityRange">품질</label>
+              <label for="qualityRange" data-i18n="quality">품질</label>
               <output id="qualityOutput">92%</output>
             </div>
             <input id="qualityRange" type="range" min="60" max="100" value="92" />
           </section>
 
-          <section class="metadata" aria-label="이미지 정보">
+          <section class="metadata" aria-label="이미지 정보" data-i18n-aria-label="metadataAria">
             <div>
-              <span>원본</span>
+              <span data-i18n="original">원본</span>
               <strong id="originalSize">-</strong>
             </div>
             <div>
-              <span>출력</span>
+              <span data-i18n="output">출력</span>
               <strong id="outputSize">-</strong>
             </div>
             <div>
-              <span>예상 메모리</span>
+              <span data-i18n="memory">예상 메모리</span>
               <strong id="memorySize">-</strong>
             </div>
           </section>
         </aside>
 
-        <section class="preview" aria-label="이미지 미리보기">
+        <section class="preview" aria-label="이미지 미리보기" data-i18n-aria-label="previewAria">
           <div class="preview-toolbar">
-            <div class="view-tabs" role="group" aria-label="미리보기 모드">
-              <button type="button" class="tab active" data-view="compare">비교</button>
-              <button type="button" class="tab" data-view="result">결과</button>
-              <button type="button" class="tab" data-view="base">원본</button>
+            <div class="view-tabs" role="group" aria-label="미리보기 모드" data-i18n-aria-label="viewModeAria">
+              <button type="button" class="tab active" data-view="compare" data-i18n="compare">비교</button>
+              <button type="button" class="tab" data-view="result" data-i18n="result">결과</button>
+              <button type="button" class="tab" data-view="base" data-i18n="base">원본</button>
             </div>
-            <div class="zoom-actions" role="group" aria-label="확대">
-              <button type="button" class="icon-button" id="fitButton" title="맞춤" aria-label="맞춤">
+            <div class="zoom-actions" role="group" aria-label="확대" data-i18n-aria-label="zoomAria">
+              <button
+                type="button"
+                class="icon-button"
+                id="fitButton"
+                title="맞춤"
+                aria-label="맞춤"
+                data-i18n-title="fit"
+                data-i18n-aria-label="fit"
+              >
                 <svg viewBox="0 0 24 24" role="img">
                   <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5M8 8h8v8H8z" />
                 </svg>
               </button>
-              <button type="button" class="icon-button" id="zoomOutButton" title="축소" aria-label="축소">
+              <button
+                type="button"
+                class="icon-button"
+                id="zoomOutButton"
+                title="축소"
+                aria-label="축소"
+                data-i18n-title="zoomOut"
+                data-i18n-aria-label="zoomOut"
+              >
                 <svg viewBox="0 0 24 24" role="img">
                   <path d="M5 12h14" />
                 </svg>
               </button>
-              <button type="button" class="icon-button" id="zoomInButton" title="확대" aria-label="확대">
+              <button
+                type="button"
+                class="icon-button"
+                id="zoomInButton"
+                title="확대"
+                aria-label="확대"
+                data-i18n-title="zoomIn"
+                data-i18n-aria-label="zoomIn"
+              >
                 <svg viewBox="0 0 24 24" role="img">
                   <path d="M12 5v14M5 12h14" />
                 </svg>
@@ -146,8 +176,8 @@
 
           <div class="stage" id="stage">
             <div class="empty-state" id="emptyState">
-              <strong>이미지를 선택하세요</strong>
-              <span>왼쪽 패널에서 파일을 열 수 있습니다</span>
+              <strong data-i18n="emptyTitle">이미지를 선택하세요</strong>
+              <span data-i18n="emptyHint">왼쪽 패널에서 파일을 열 수 있습니다</span>
             </div>
 
             <div class="compare-frame hidden" id="compareFrame">
@@ -164,6 +194,7 @@
                 max="100"
                 value="55"
                 aria-label="비교 위치"
+                data-i18n-aria-label="comparePosition"
               />
             </div>
           </div>

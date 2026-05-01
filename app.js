@@ -3,7 +3,115 @@ const MAX_CANVAS_SIDE = 16384;
 const PREVIEW_MAX_PIXELS = 2200000;
 const DETAIL_EXPORT_MAX_PIXELS = 36000000;
 const DETAIL_TILE_ROWS = 128;
+const LOCALE_STORAGE_KEY = "lumaScaleLocale";
 const ZOOM_STEPS = [0.25, 0.5, 0.75, 1, 1.5, 2];
+
+const messages = {
+  ko: {
+    documentTitle: "LumaScale 이미지 업스케일러",
+    appSubtitle: "이미지 업스케일러",
+    open: "열기",
+    export: "내보내기",
+    controlsAria: "업스케일 설정",
+    dropTitle: "이미지 놓기",
+    outputSize: "출력 크기",
+    scaleAria: "업스케일 배율",
+    method: "방식",
+    detailMode: "디테일 보정",
+    smoothMode: "부드럽게",
+    pixelMode: "픽셀 아트",
+    fitMode: "비율 처리",
+    coverMode: "채우기",
+    containMode: "전체",
+    stretchMode: "늘이기",
+    sharpness: "선명도",
+    fileFormat: "파일 형식",
+    quality: "품질",
+    metadataAria: "이미지 정보",
+    original: "원본",
+    output: "출력",
+    memory: "예상 메모리",
+    previewAria: "이미지 미리보기",
+    viewModeAria: "미리보기 모드",
+    compare: "비교",
+    result: "결과",
+    base: "원본",
+    zoomAria: "확대",
+    fit: "맞춤",
+    zoomOut: "축소",
+    zoomIn: "확대",
+    emptyTitle: "이미지를 선택하세요",
+    emptyHint: "왼쪽 패널에서 파일을 열 수 있습니다",
+    comparePosition: "비교 위치",
+    noFile: "파일 없음",
+    chooseImage: "이미지 파일을 선택해주세요",
+    opening: "이미지 여는 중",
+    cannotOpen: "이미지를 열 수 없습니다",
+    lowerSize: "출력 크기를 낮춰주세요",
+    previewing: "미리보기 처리 중",
+    done: "완료",
+    fitting: "맞춤",
+    exporting: "{dimensions} 내보내는 중",
+    detailProgress: "선명도 보정 {progress}%",
+    fastDetail: "대형 파일 빠른 디테일 처리 중",
+    creatingFile: "파일 만드는 중",
+    exportDone: "내보내기 완료",
+    exportFailed: "내보내기에 실패했습니다",
+    waiting: "대기 중",
+  },
+  en: {
+    documentTitle: "LumaScale Image Upscaler",
+    appSubtitle: "Image Upscaler",
+    open: "Open",
+    export: "Export",
+    controlsAria: "Upscale settings",
+    dropTitle: "Drop Image",
+    outputSize: "Output Size",
+    scaleAria: "Upscale ratio",
+    method: "Method",
+    detailMode: "Detail Boost",
+    smoothMode: "Smooth",
+    pixelMode: "Pixel Art",
+    fitMode: "Fit Mode",
+    coverMode: "Cover",
+    containMode: "Contain",
+    stretchMode: "Stretch",
+    sharpness: "Sharpness",
+    fileFormat: "File Format",
+    quality: "Quality",
+    metadataAria: "Image information",
+    original: "Original",
+    output: "Output",
+    memory: "Est. Memory",
+    previewAria: "Image preview",
+    viewModeAria: "Preview mode",
+    compare: "Compare",
+    result: "Result",
+    base: "Original",
+    zoomAria: "Zoom",
+    fit: "Fit",
+    zoomOut: "Zoom Out",
+    zoomIn: "Zoom In",
+    emptyTitle: "Choose an image",
+    emptyHint: "Open a file from the left panel",
+    comparePosition: "Compare position",
+    noFile: "No file",
+    chooseImage: "Please choose an image file",
+    opening: "Opening image",
+    cannotOpen: "Could not open the image",
+    lowerSize: "Please lower the output size",
+    previewing: "Rendering preview",
+    done: "Done",
+    fitting: "Fit",
+    exporting: "Exporting {dimensions}",
+    detailProgress: "Sharpening {progress}%",
+    fastDetail: "Applying fast detail pass for large file",
+    creatingFile: "Creating file",
+    exportDone: "Export complete",
+    exportFailed: "Export failed",
+    waiting: "Ready",
+  },
+};
 
 const state = {
   file: null,
@@ -17,9 +125,12 @@ const state = {
   sharpness: 42,
   format: "image/png",
   quality: 0.92,
+  locale: localStorage.getItem(LOCALE_STORAGE_KEY) || "ko",
   view: "compare",
   zoom: "fit",
   ready: false,
+  statusKey: "waiting",
+  statusParams: {},
   renderId: 0,
 };
 
@@ -27,6 +138,7 @@ const dom = {
   fileInput: document.querySelector("#fileInput"),
   openButton: document.querySelector("#openButton"),
   downloadButton: document.querySelector("#downloadButton"),
+  languageButtons: document.querySelectorAll("[data-locale]"),
   dropZone: document.querySelector("#dropZone"),
   scaleOutput: document.querySelector("#scaleOutput"),
   widthInput: document.querySelector("#widthInput"),
@@ -58,6 +170,47 @@ const dom = {
 
 const waitFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
 
+function translate(key, params = {}) {
+  const template = messages[state.locale]?.[key] || messages.ko[key] || key;
+  return Object.entries(params).reduce(
+    (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+    template,
+  );
+}
+
+function setLocale(locale) {
+  state.locale = messages[locale] ? locale : "ko";
+  localStorage.setItem(LOCALE_STORAGE_KEY, state.locale);
+  document.documentElement.lang = state.locale;
+  document.title = translate("documentTitle");
+
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    element.textContent = translate(element.dataset.i18n);
+  });
+
+  document.querySelectorAll("[data-i18n-aria-label]").forEach((element) => {
+    element.setAttribute("aria-label", translate(element.dataset.i18nAriaLabel));
+  });
+
+  document.querySelectorAll("[data-i18n-title]").forEach((element) => {
+    element.setAttribute("title", translate(element.dataset.i18nTitle));
+  });
+
+  dom.languageButtons.forEach((button) => {
+    const isActive = button.dataset.locale === state.locale;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+
+  if (!state.file) {
+    dom.fileName.textContent = translate("noFile");
+  }
+
+  if (state.statusKey) {
+    setStatusKey(state.statusKey, state.statusParams);
+  }
+}
+
 function formatDimensions(width, height) {
   return `${width.toLocaleString()} x ${height.toLocaleString()}`;
 }
@@ -68,7 +221,15 @@ function formatMemory(bytes) {
   return `${mb.toFixed(mb >= 100 ? 0 : 1)} MB`;
 }
 
+function setStatusKey(key, params = {}) {
+  state.statusKey = key;
+  state.statusParams = params;
+  dom.statusText.textContent = translate(key, params);
+}
+
 function setStatus(message) {
+  state.statusKey = "";
+  state.statusParams = {};
   dom.statusText.textContent = message;
 }
 
@@ -149,12 +310,12 @@ function updateStats() {
 
 async function loadFile(file) {
   if (!file || !file.type.startsWith("image/")) {
-    setStatus("이미지 파일을 선택해주세요");
+    setStatusKey("chooseImage");
     return;
   }
 
   setBusy(true);
-  setStatus("이미지 여는 중");
+  setStatusKey("opening");
   dom.fileName.textContent = file.name;
 
   try {
@@ -170,7 +331,7 @@ async function loadFile(file) {
     await render();
   } catch (error) {
     console.error(error);
-    setStatus("이미지를 열 수 없습니다");
+    setStatusKey("cannotOpen");
   } finally {
     setBusy(false);
   }
@@ -375,12 +536,12 @@ async function render() {
   ) {
     state.ready = false;
     dom.downloadButton.disabled = true;
-    setStatus("출력 크기를 낮춰주세요");
+    setStatusKey("lowerSize");
     return;
   }
 
   setBusy(true);
-  setStatus("미리보기 처리 중");
+  setStatusKey("previewing");
   await waitFrame();
   if (renderId !== state.renderId) return;
 
@@ -401,7 +562,7 @@ async function render() {
   updateFrameSize();
   setView(state.view);
   state.ready = true;
-  setStatus("완료");
+  setStatusKey("done");
   setBusy(false);
 }
 
@@ -482,7 +643,11 @@ function changeZoom(direction) {
   }
 
   updateFrameSize();
-  setStatus(state.zoom === "fit" ? "맞춤" : `${Math.round(state.zoom * 100)}%`);
+  if (state.zoom === "fit") {
+    setStatusKey("fitting");
+  } else {
+    setStatus(`${Math.round(state.zoom * 100)}%`);
+  }
 }
 
 function getExtension(mimeType) {
@@ -507,7 +672,7 @@ async function downloadResult() {
   const exportCanvas = document.createElement("canvas");
 
   setBusy(true);
-  setStatus(`${formatDimensions(output.width, output.height)} 내보내는 중`);
+  setStatusKey("exporting", { dimensions: formatDimensions(output.width, output.height) });
   await waitFrame();
 
   try {
@@ -527,14 +692,14 @@ async function downloadResult() {
 
     if (canUseTiledDetail) {
       await applyUnsharpMaskTiled(exportCanvas, state.sharpness, (progress) => {
-        setStatus(`선명도 보정 ${Math.round(progress * 100)}%`);
+        setStatusKey("detailProgress", { progress: Math.round(progress * 100) });
       });
     } else if (state.method === "detail") {
-      setStatus("대형 파일 빠른 디테일 처리 중");
+      setStatusKey("fastDetail");
       await waitFrame();
     }
 
-    setStatus("파일 만드는 중");
+    setStatusKey("creatingFile");
     const blob = await canvasToBlob(exportCanvas, state.format, quality);
     if (!blob) throw new Error("Canvas export failed");
 
@@ -548,10 +713,10 @@ async function downloadResult() {
     link.download = `${baseName}-${sizeLabel}.${extension}`;
     link.click();
     URL.revokeObjectURL(url);
-    setStatus("내보내기 완료");
+    setStatusKey("exportDone");
   } catch (error) {
     console.error(error);
-    setStatus("내보내기에 실패했습니다");
+    setStatusKey("exportFailed");
   } finally {
     exportCanvas.width = 0;
     exportCanvas.height = 0;
@@ -560,6 +725,9 @@ async function downloadResult() {
 }
 
 dom.openButton.addEventListener("click", () => dom.fileInput.click());
+dom.languageButtons.forEach((button) => {
+  button.addEventListener("click", () => setLocale(button.dataset.locale));
+});
 dom.fileInput.addEventListener("change", (event) => {
   loadFile(event.target.files[0]);
   event.target.value = "";
@@ -645,7 +813,7 @@ dom.splitRange.addEventListener("input", (event) => updateSplit(event.target.val
 dom.fitButton.addEventListener("click", () => {
   state.zoom = "fit";
   updateFrameSize();
-  setStatus("맞춤");
+  setStatusKey("fitting");
 });
 dom.zoomInButton.addEventListener("click", () => changeZoom(1));
 dom.zoomOutButton.addEventListener("click", () => changeZoom(-1));
@@ -654,4 +822,5 @@ window.addEventListener("resize", updateFrameSize);
 updateSplit(dom.splitRange.value);
 syncSizeControls();
 updateStats();
+setLocale(state.locale);
 dom.qualityRange.disabled = state.format === "image/png";
