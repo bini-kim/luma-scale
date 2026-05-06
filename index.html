@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LumaScale Image Upscaler</title>
+    <title>LumaScale Photo Editor</title>
     <link rel="stylesheet" href="styles.css" />
     <script src="app.js" defer></script>
   </head>
@@ -31,7 +31,7 @@
       </header>
 
       <main class="workspace">
-        <aside class="controls" aria-label="업스케일 설정" data-i18n-aria-label="controlsAria">
+        <aside class="controls" aria-label="사진 편집 도구" data-i18n-aria-label="controlsAria">
           <section class="dropzone" id="dropZone" tabindex="0">
             <div class="drop-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" role="img">
@@ -42,103 +42,166 @@
             <span>PNG, JPG, WebP</span>
           </section>
 
-          <section class="control-group">
-            <div class="label-row">
-              <label data-i18n="outputSize">출력 크기</label>
-              <output id="scaleOutput">2x</output>
-            </div>
-            <div class="segmented" role="group" aria-label="업스케일 배율" data-i18n-aria-label="scaleAria">
-              <button type="button" class="segment active" data-scale="2">2x</button>
-              <button type="button" class="segment" data-scale="3">3x</button>
-              <button type="button" class="segment" data-scale="4">4x</button>
-              <button type="button" class="segment" data-output-width="13500" data-output-height="10500">13.5K</button>
-            </div>
-            <div class="dimension-grid">
-              <label>
-                <span>W</span>
-                <input id="widthInput" type="number" min="1" max="16384" inputmode="numeric" />
-              </label>
-              <label>
-                <span>H</span>
-                <input id="heightInput" type="number" min="1" max="16384" inputmode="numeric" />
-              </label>
-            </div>
-          </section>
+          <nav class="tool-nav" aria-label="편집 도구" data-i18n-aria-label="toolsAria">
+            <button type="button" class="tool-button active" data-tool="crop" data-i18n="cropTool">자르기</button>
+            <button type="button" class="tool-button" data-tool="upscale" data-i18n="upscaleTool">업스케일</button>
+            <button type="button" class="tool-button" data-tool="enhance" data-i18n="enhanceTool">화질</button>
+            <button type="button" class="tool-button" data-tool="filters" data-i18n="filtersTool">필터</button>
+            <button type="button" class="tool-button" data-tool="export" data-i18n="exportTool">내보내기</button>
+          </nav>
 
-          <section class="control-group">
-            <label for="methodSelect" data-i18n="method">방식</label>
-            <select id="methodSelect">
-              <option value="detail" data-i18n="detailMode">디테일 보정</option>
-              <option value="smooth" data-i18n="smoothMode">부드럽게</option>
-              <option value="pixel" data-i18n="pixelMode">픽셀 아트</option>
-            </select>
-          </section>
+          <div class="tool-panel active" data-tool-panel="crop">
+            <section class="control-group">
+              <div class="label-row">
+                <label data-i18n="cropTool">자르기</label>
+                <button class="text-button" id="resetCropButton" type="button" data-i18n="reset">초기화</button>
+              </div>
+              <div class="label-row">
+                <label for="cropXRange" data-i18n="cropLeft">왼쪽</label>
+                <output id="cropXOutput">0%</output>
+              </div>
+              <input id="cropXRange" type="range" min="0" max="99" value="0" />
+              <div class="label-row">
+                <label for="cropYRange" data-i18n="cropTop">위</label>
+                <output id="cropYOutput">0%</output>
+              </div>
+              <input id="cropYRange" type="range" min="0" max="99" value="0" />
+              <div class="label-row">
+                <label for="cropWidthRange" data-i18n="cropWidth">너비</label>
+                <output id="cropWidthOutput">100%</output>
+              </div>
+              <input id="cropWidthRange" type="range" min="1" max="100" value="100" />
+              <div class="label-row">
+                <label for="cropHeightRange" data-i18n="cropHeight">높이</label>
+                <output id="cropHeightOutput">100%</output>
+              </div>
+              <input id="cropHeightRange" type="range" min="1" max="100" value="100" />
+            </section>
+          </div>
 
-          <section class="control-group">
-            <label for="fitModeSelect" data-i18n="fitMode">비율 처리</label>
-            <select id="fitModeSelect">
-              <option value="cover" data-i18n="coverMode">채우기</option>
-              <option value="contain" data-i18n="containMode">전체</option>
-              <option value="stretch" data-i18n="stretchMode">늘이기</option>
-            </select>
-          </section>
+          <div class="tool-panel" data-tool-panel="upscale">
+            <section class="control-group">
+              <div class="label-row">
+                <label data-i18n="outputSize">출력 크기</label>
+                <output id="scaleOutput">2x</output>
+              </div>
+              <div class="segmented" role="group" aria-label="업스케일 배율" data-i18n-aria-label="scaleAria">
+                <button type="button" class="segment active" data-scale="2">2x</button>
+                <button type="button" class="segment" data-scale="3">3x</button>
+                <button type="button" class="segment" data-scale="4">4x</button>
+                <button type="button" class="segment" data-output-width="13500" data-output-height="10500">13.5K</button>
+              </div>
+              <div class="dimension-grid">
+                <label>
+                  <span>W</span>
+                  <input id="widthInput" type="number" min="1" max="16384" inputmode="numeric" />
+                </label>
+                <label>
+                  <span>H</span>
+                  <input id="heightInput" type="number" min="1" max="16384" inputmode="numeric" />
+                </label>
+              </div>
+            </section>
 
-          <section class="control-group">
-            <div class="label-row">
-              <label data-i18n="photoEnhance">화질 개선</label>
-              <output id="enhanceOutput">꺼짐</output>
-            </div>
-            <div class="segmented three" role="group" aria-label="화질 개선" data-i18n-aria-label="enhanceAria">
-              <button type="button" class="segment active" data-enhance="off" data-i18n="enhanceOff">끄기</button>
-              <button type="button" class="segment" data-enhance="auto" data-i18n="enhanceAuto">자동</button>
-              <button type="button" class="segment" data-enhance="vivid" data-i18n="enhanceVivid">선명하게</button>
-            </div>
-            <div class="label-row">
-              <label for="enhanceStrengthRange" data-i18n="enhanceStrength">개선 강도</label>
-              <output id="enhanceStrengthOutput">55%</output>
-            </div>
-            <input id="enhanceStrengthRange" type="range" min="0" max="100" value="55" disabled />
-          </section>
+            <section class="control-group">
+              <label for="methodSelect" data-i18n="method">방식</label>
+              <select id="methodSelect">
+                <option value="detail" data-i18n="detailMode">디테일 보정</option>
+                <option value="smooth" data-i18n="smoothMode">부드럽게</option>
+                <option value="pixel" data-i18n="pixelMode">픽셀 아트</option>
+              </select>
+            </section>
 
-          <section class="control-group">
-            <div class="label-row">
-              <label for="sharpnessRange" data-i18n="sharpness">선명도</label>
-              <output id="sharpnessOutput">42</output>
-            </div>
-            <input id="sharpnessRange" type="range" min="0" max="80" value="42" />
-          </section>
+            <section class="control-group">
+              <label for="fitModeSelect" data-i18n="fitMode">비율 처리</label>
+              <select id="fitModeSelect">
+                <option value="cover" data-i18n="coverMode">채우기</option>
+                <option value="contain" data-i18n="containMode">전체</option>
+                <option value="stretch" data-i18n="stretchMode">늘이기</option>
+              </select>
+            </section>
+          </div>
 
-          <section class="control-group">
-            <label for="formatSelect" data-i18n="fileFormat">파일 형식</label>
-            <select id="formatSelect">
-              <option value="image/png">PNG</option>
-              <option value="image/jpeg">JPEG</option>
-              <option value="image/webp">WebP</option>
-            </select>
-          </section>
+          <div class="tool-panel" data-tool-panel="enhance">
+            <section class="control-group">
+              <div class="label-row">
+                <label data-i18n="photoEnhance">화질 개선</label>
+                <output id="enhanceOutput">꺼짐</output>
+              </div>
+              <div class="segmented three" role="group" aria-label="화질 개선" data-i18n-aria-label="enhanceAria">
+                <button type="button" class="segment active" data-enhance="off" data-i18n="enhanceOff">끄기</button>
+                <button type="button" class="segment" data-enhance="auto" data-i18n="enhanceAuto">자동</button>
+                <button type="button" class="segment" data-enhance="vivid" data-i18n="enhanceVivid">선명하게</button>
+              </div>
+              <div class="label-row">
+                <label for="enhanceStrengthRange" data-i18n="enhanceStrength">개선 강도</label>
+                <output id="enhanceStrengthOutput">55%</output>
+              </div>
+              <input id="enhanceStrengthRange" type="range" min="0" max="100" value="55" disabled />
+            </section>
 
-          <section class="control-group">
-            <div class="label-row">
-              <label for="qualityRange" data-i18n="quality">품질</label>
-              <output id="qualityOutput">92%</output>
-            </div>
-            <input id="qualityRange" type="range" min="60" max="100" value="92" />
-          </section>
+            <section class="control-group">
+              <div class="label-row">
+                <label for="sharpnessRange" data-i18n="sharpness">선명도</label>
+                <output id="sharpnessOutput">42</output>
+              </div>
+              <input id="sharpnessRange" type="range" min="0" max="80" value="42" />
+            </section>
+          </div>
 
-          <section class="metadata" aria-label="이미지 정보" data-i18n-aria-label="metadataAria">
-            <div>
-              <span data-i18n="original">원본</span>
-              <strong id="originalSize">-</strong>
-            </div>
-            <div>
-              <span data-i18n="output">출력</span>
-              <strong id="outputSize">-</strong>
-            </div>
-            <div>
-              <span data-i18n="memory">예상 메모리</span>
-              <strong id="memorySize">-</strong>
-            </div>
-          </section>
+          <div class="tool-panel" data-tool-panel="filters">
+            <section class="control-group">
+              <label for="filterSelect" data-i18n="filterPreset">필터</label>
+              <select id="filterSelect">
+                <option value="none" data-i18n="filterNone">없음</option>
+                <option value="warm" data-i18n="filterWarm">따뜻하게</option>
+                <option value="cool" data-i18n="filterCool">차갑게</option>
+                <option value="mono" data-i18n="filterMono">흑백</option>
+                <option value="cinematic" data-i18n="filterCinematic">시네마틱</option>
+              </select>
+            </section>
+            <section class="control-group">
+              <div class="label-row">
+                <label for="filterStrengthRange" data-i18n="filterStrength">필터 강도</label>
+                <output id="filterStrengthOutput">60%</output>
+              </div>
+              <input id="filterStrengthRange" type="range" min="0" max="100" value="60" />
+            </section>
+          </div>
+
+          <div class="tool-panel" data-tool-panel="export">
+            <section class="control-group">
+              <label for="formatSelect" data-i18n="fileFormat">파일 형식</label>
+              <select id="formatSelect">
+                <option value="image/png">PNG</option>
+                <option value="image/jpeg">JPEG</option>
+                <option value="image/webp">WebP</option>
+              </select>
+            </section>
+
+            <section class="control-group">
+              <div class="label-row">
+                <label for="qualityRange" data-i18n="quality">품질</label>
+                <output id="qualityOutput">92%</output>
+              </div>
+              <input id="qualityRange" type="range" min="60" max="100" value="92" />
+            </section>
+
+            <section class="metadata" aria-label="이미지 정보" data-i18n-aria-label="metadataAria">
+              <div>
+                <span data-i18n="original">원본</span>
+                <strong id="originalSize">-</strong>
+              </div>
+              <div>
+                <span data-i18n="output">출력</span>
+                <strong id="outputSize">-</strong>
+              </div>
+              <div>
+                <span data-i18n="memory">예상 메모리</span>
+                <strong id="memorySize">-</strong>
+              </div>
+            </section>
+          </div>
         </aside>
 
         <section class="preview" aria-label="이미지 미리보기" data-i18n-aria-label="previewAria">

@@ -107,7 +107,9 @@ button {
 .segment,
 .tab,
 .icon-button,
-.lang-button {
+.lang-button,
+.tool-button,
+.text-button {
   min-height: 40px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -129,7 +131,9 @@ button {
 .segment:hover,
 .tab:hover,
 .icon-button:hover,
-.lang-button:hover {
+.lang-button:hover,
+.tool-button:hover,
+.text-button:hover {
   border-color: var(--line-strong);
   transform: translateY(-1px);
 }
@@ -222,6 +226,43 @@ button {
 .dropzone span {
   color: var(--muted);
   font-size: 13px;
+}
+
+.tool-nav {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.tool-button {
+  min-width: 0;
+  padding: 0 8px;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.tool-button.active {
+  border-color: rgba(8, 127, 115, 0.28);
+  background: rgba(8, 127, 115, 0.1);
+  color: var(--teal-dark);
+}
+
+.tool-panel {
+  display: none;
+  gap: 18px;
+}
+
+.tool-panel.active {
+  display: grid;
+}
+
+.text-button {
+  min-height: 30px;
+  padding: 0 10px;
+  background: #ffffff;
+  color: var(--teal-dark);
+  font-size: 12px;
+  font-weight: 850;
 }
 
 .drop-icon {

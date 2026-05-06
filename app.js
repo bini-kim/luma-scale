@@ -8,12 +8,23 @@ const ZOOM_STEPS = [0.25, 0.5, 0.75, 1, 1.5, 2];
 
 const messages = {
   ko: {
-    documentTitle: "LumaScale 이미지 업스케일러",
-    appSubtitle: "이미지 업스케일러",
+    documentTitle: "LumaScale 사진 편집기",
+    appSubtitle: "사진 편집기",
     open: "열기",
     export: "내보내기",
-    controlsAria: "업스케일 설정",
+    controlsAria: "사진 편집 도구",
     dropTitle: "이미지 놓기",
+    toolsAria: "편집 도구",
+    cropTool: "자르기",
+    upscaleTool: "업스케일",
+    enhanceTool: "화질",
+    filtersTool: "필터",
+    exportTool: "내보내기",
+    reset: "초기화",
+    cropLeft: "왼쪽",
+    cropTop: "위",
+    cropWidth: "너비",
+    cropHeight: "높이",
     outputSize: "출력 크기",
     scaleAria: "업스케일 배율",
     method: "방식",
@@ -31,6 +42,13 @@ const messages = {
     enhanceVivid: "선명하게",
     enhanceStrength: "개선 강도",
     sharpness: "선명도",
+    filterPreset: "필터",
+    filterNone: "없음",
+    filterWarm: "따뜻하게",
+    filterCool: "차갑게",
+    filterMono: "흑백",
+    filterCinematic: "시네마틱",
+    filterStrength: "필터 강도",
     fileFormat: "파일 형식",
     quality: "품질",
     metadataAria: "이미지 정보",
@@ -66,12 +84,23 @@ const messages = {
     waiting: "대기 중",
   },
   en: {
-    documentTitle: "LumaScale Image Upscaler",
-    appSubtitle: "Image Upscaler",
+    documentTitle: "LumaScale Photo Editor",
+    appSubtitle: "Photo Editor",
     open: "Open",
     export: "Export",
-    controlsAria: "Upscale settings",
+    controlsAria: "Photo editing tools",
     dropTitle: "Drop Image",
+    toolsAria: "Editing tools",
+    cropTool: "Crop",
+    upscaleTool: "Upscale",
+    enhanceTool: "Quality",
+    filtersTool: "Filters",
+    exportTool: "Export",
+    reset: "Reset",
+    cropLeft: "Left",
+    cropTop: "Top",
+    cropWidth: "Width",
+    cropHeight: "Height",
     outputSize: "Output Size",
     scaleAria: "Upscale ratio",
     method: "Method",
@@ -89,6 +118,13 @@ const messages = {
     enhanceVivid: "Vivid",
     enhanceStrength: "Boost Strength",
     sharpness: "Sharpness",
+    filterPreset: "Filter",
+    filterNone: "None",
+    filterWarm: "Warm",
+    filterCool: "Cool",
+    filterMono: "Mono",
+    filterCinematic: "Cinematic",
+    filterStrength: "Filter Strength",
     fileFormat: "File Format",
     quality: "Quality",
     metadataAria: "Image information",
@@ -128,14 +164,18 @@ const messages = {
 const state = {
   file: null,
   image: null,
+  activeTool: "crop",
   sizeMode: "scale",
   scale: 2,
   customWidth: 13500,
   customHeight: 10500,
+  crop: { x: 0, y: 0, width: 100, height: 100 },
   method: "detail",
   fitMode: "cover",
   enhanceMode: "off",
   enhanceStrength: 55,
+  filterPreset: "none",
+  filterStrength: 60,
   sharpness: 42,
   format: "image/png",
   quality: 0.92,
@@ -153,15 +193,29 @@ const dom = {
   openButton: document.querySelector("#openButton"),
   downloadButton: document.querySelector("#downloadButton"),
   languageButtons: document.querySelectorAll("[data-locale]"),
+  toolButtons: document.querySelectorAll("[data-tool]"),
+  toolPanels: document.querySelectorAll("[data-tool-panel]"),
   dropZone: document.querySelector("#dropZone"),
   scaleOutput: document.querySelector("#scaleOutput"),
   widthInput: document.querySelector("#widthInput"),
   heightInput: document.querySelector("#heightInput"),
+  resetCropButton: document.querySelector("#resetCropButton"),
+  cropXRange: document.querySelector("#cropXRange"),
+  cropYRange: document.querySelector("#cropYRange"),
+  cropWidthRange: document.querySelector("#cropWidthRange"),
+  cropHeightRange: document.querySelector("#cropHeightRange"),
+  cropXOutput: document.querySelector("#cropXOutput"),
+  cropYOutput: document.querySelector("#cropYOutput"),
+  cropWidthOutput: document.querySelector("#cropWidthOutput"),
+  cropHeightOutput: document.querySelector("#cropHeightOutput"),
   methodSelect: document.querySelector("#methodSelect"),
   fitModeSelect: document.querySelector("#fitModeSelect"),
   enhanceOutput: document.querySelector("#enhanceOutput"),
   enhanceStrengthRange: document.querySelector("#enhanceStrengthRange"),
   enhanceStrengthOutput: document.querySelector("#enhanceStrengthOutput"),
+  filterSelect: document.querySelector("#filterSelect"),
+  filterStrengthRange: document.querySelector("#filterStrengthRange"),
+  filterStrengthOutput: document.querySelector("#filterStrengthOutput"),
   sharpnessRange: document.querySelector("#sharpnessRange"),
   sharpnessOutput: document.querySelector("#sharpnessOutput"),
   formatSelect: document.querySelector("#formatSelect"),
@@ -222,7 +276,9 @@ function setLocale(locale) {
   if (!state.file) {
     dom.fileName.textContent = translate("noFile");
   }
+  updateCropControls();
   updateEnhanceControls();
+  updateFilterControls();
 
   if (state.statusKey) {
     setStatusKey(state.statusKey, state.statusParams);
@@ -265,10 +321,11 @@ function clampDimension(value) {
 
 function getOutputSize() {
   if (!state.image) return { width: 0, height: 0, pixels: 0 };
+  const source = getEffectiveSourceSize();
   const width =
-    state.sizeMode === "custom" ? state.customWidth : state.image.width * state.scale;
+    state.sizeMode === "custom" ? state.customWidth : Math.round(source.width * state.scale);
   const height =
-    state.sizeMode === "custom" ? state.customHeight : state.image.height * state.scale;
+    state.sizeMode === "custom" ? state.customHeight : Math.round(source.height * state.scale);
   return { width, height, pixels: width * height };
 }
 
@@ -280,6 +337,66 @@ function getPreviewSize(output) {
     width: Math.max(1, Math.round(output.width * ratio)),
     height: Math.max(1, Math.round(output.height * ratio)),
   };
+}
+
+function clampPercent(value, min = 0, max = 100) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return min;
+  return Math.max(min, Math.min(max, Math.round(number)));
+}
+
+function normalizeCrop() {
+  state.crop.width = clampPercent(state.crop.width, 1, 100);
+  state.crop.height = clampPercent(state.crop.height, 1, 100);
+  state.crop.x = clampPercent(state.crop.x, 0, 100 - state.crop.width);
+  state.crop.y = clampPercent(state.crop.y, 0, 100 - state.crop.height);
+  state.crop.width = Math.min(state.crop.width, 100 - state.crop.x);
+  state.crop.height = Math.min(state.crop.height, 100 - state.crop.y);
+}
+
+function getSourceCropRect(source = state.image) {
+  if (!source) return { x: 0, y: 0, width: 0, height: 0 };
+  normalizeCrop();
+  const width = Math.max(1, source.width * (state.crop.width / 100));
+  const height = Math.max(1, source.height * (state.crop.height / 100));
+  const x = Math.min(source.width - width, source.width * (state.crop.x / 100));
+  const y = Math.min(source.height - height, source.height * (state.crop.y / 100));
+  return { x, y, width, height };
+}
+
+function getEffectiveSourceSize() {
+  const rect = getSourceCropRect();
+  return { width: rect.width, height: rect.height };
+}
+
+function updateCropControls() {
+  normalizeCrop();
+  dom.cropXRange.max = String(100 - state.crop.width);
+  dom.cropYRange.max = String(100 - state.crop.height);
+  dom.cropWidthRange.max = String(100 - state.crop.x);
+  dom.cropHeightRange.max = String(100 - state.crop.y);
+  dom.cropXRange.value = String(state.crop.x);
+  dom.cropYRange.value = String(state.crop.y);
+  dom.cropWidthRange.value = String(state.crop.width);
+  dom.cropHeightRange.value = String(state.crop.height);
+  dom.cropXOutput.textContent = `${state.crop.x}%`;
+  dom.cropYOutput.textContent = `${state.crop.y}%`;
+  dom.cropWidthOutput.textContent = `${state.crop.width}%`;
+  dom.cropHeightOutput.textContent = `${state.crop.height}%`;
+}
+
+function setCropValue(key, value) {
+  state.crop[key] = clampPercent(value, key === "width" || key === "height" ? 1 : 0, 100);
+  updateCropControls();
+  updateStats();
+  scheduleRender();
+}
+
+function resetCrop() {
+  state.crop = { x: 0, y: 0, width: 100, height: 100 };
+  updateCropControls();
+  updateStats();
+  scheduleRender();
 }
 
 function getEnhancementFilter() {
@@ -307,6 +424,38 @@ function getEnhancementFilter() {
   ].join(" ");
 }
 
+function getFilterEffect() {
+  if (state.filterPreset === "none" || state.filterStrength <= 0) return "none";
+
+  const amount = state.filterStrength / 100;
+  const filters = {
+    warm: [
+      `sepia(${(amount * 0.22).toFixed(3)})`,
+      `saturate(${(1 + amount * 0.24).toFixed(3)})`,
+      `hue-rotate(${(-7 * amount).toFixed(2)}deg)`,
+    ],
+    cool: [
+      `saturate(${(1 + amount * 0.12).toFixed(3)})`,
+      `contrast(${(1 + amount * 0.06).toFixed(3)})`,
+      `hue-rotate(${(10 * amount).toFixed(2)}deg)`,
+    ],
+    mono: [`grayscale(${amount.toFixed(3)})`, `contrast(${(1 + amount * 0.12).toFixed(3)})`],
+    cinematic: [
+      `contrast(${(1 + amount * 0.22).toFixed(3)})`,
+      `saturate(${(1 - amount * 0.08).toFixed(3)})`,
+      `sepia(${(amount * 0.1).toFixed(3)})`,
+      `brightness(${(1 - amount * 0.025).toFixed(3)})`,
+    ],
+  };
+
+  return (filters[state.filterPreset] || []).join(" ") || "none";
+}
+
+function getVisualFilter() {
+  const filters = [getEnhancementFilter(), getFilterEffect()].filter((filter) => filter !== "none");
+  return filters.length ? filters.join(" ") : "none";
+}
+
 function updateEnhanceControls() {
   dom.enhanceOutput.textContent = translate(
     state.enhanceMode === "off"
@@ -321,6 +470,12 @@ function updateEnhanceControls() {
   document.querySelectorAll("[data-enhance]").forEach((button) => {
     button.classList.toggle("active", button.dataset.enhance === state.enhanceMode);
   });
+}
+
+function updateFilterControls() {
+  dom.filterSelect.value = state.filterPreset;
+  dom.filterStrengthOutput.textContent = `${state.filterStrength}%`;
+  dom.filterStrengthRange.disabled = state.filterPreset === "none";
 }
 
 function syncSizeControls() {
@@ -413,13 +568,15 @@ async function createBitmap(file) {
   });
 }
 
-function getDrawRect(source, width, height, fitMode) {
+function getDrawRect(source, width, height, fitMode, cropRect = null) {
+  const area = cropRect || { x: 0, y: 0, width: source.width, height: source.height };
+
   if (fitMode === "stretch") {
     return {
-      sx: 0,
-      sy: 0,
-      sw: source.width,
-      sh: source.height,
+      sx: area.x,
+      sy: area.y,
+      sw: area.width,
+      sh: area.height,
       dx: 0,
       dy: 0,
       dw: width,
@@ -427,17 +584,17 @@ function getDrawRect(source, width, height, fitMode) {
     };
   }
 
-  const sourceAspect = source.width / source.height;
+  const sourceAspect = area.width / area.height;
   const targetAspect = width / height;
 
   if (fitMode === "contain") {
     const dw = sourceAspect > targetAspect ? width : height * sourceAspect;
     const dh = sourceAspect > targetAspect ? width / sourceAspect : height;
     return {
-      sx: 0,
-      sy: 0,
-      sw: source.width,
-      sh: source.height,
+      sx: area.x,
+      sy: area.y,
+      sw: area.width,
+      sh: area.height,
       dx: (width - dw) / 2,
       dy: (height - dh) / 2,
       dw,
@@ -445,11 +602,11 @@ function getDrawRect(source, width, height, fitMode) {
     };
   }
 
-  const sw = sourceAspect > targetAspect ? source.height * targetAspect : source.width;
-  const sh = sourceAspect > targetAspect ? source.height : source.width / targetAspect;
+  const sw = sourceAspect > targetAspect ? area.height * targetAspect : area.width;
+  const sh = sourceAspect > targetAspect ? area.height : area.width / targetAspect;
   return {
-    sx: (source.width - sw) / 2,
-    sy: (source.height - sh) / 2,
+    sx: area.x + (area.width - sw) / 2,
+    sy: area.y + (area.height - sh) / 2,
     sw,
     sh,
     dx: 0,
@@ -467,6 +624,7 @@ function drawScaled(
   willReadFrequently = false,
   fastDetail = false,
   enhancementFilter = "none",
+  cropRect = null,
 ) {
   const ctx = canvas.getContext("2d", { willReadFrequently });
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -476,7 +634,7 @@ function drawScaled(
   if (enhancementFilter !== "none") filters.push(enhancementFilter);
   if (fastDetail) filters.push("contrast(1.035) saturate(1.015)");
   ctx.filter = filters.length ? filters.join(" ") : "none";
-  const rect = getDrawRect(source, canvas.width, canvas.height, fitMode);
+  const rect = getDrawRect(source, canvas.width, canvas.height, fitMode, cropRect);
   ctx.drawImage(source, rect.sx, rect.sy, rect.sw, rect.sh, rect.dx, rect.dy, rect.dw, rect.dh);
   ctx.filter = "none";
 }
@@ -588,7 +746,8 @@ async function render() {
   const renderId = (state.renderId += 1);
   const output = getOutputSize();
   const preview = getPreviewSize(output);
-  const enhancementFilter = getEnhancementFilter();
+  const cropRect = getSourceCropRect();
+  const visualFilter = getVisualFilter();
   updateStats();
 
   if (
@@ -614,7 +773,7 @@ async function render() {
   dom.resultCanvas.width = preview.width;
   dom.resultCanvas.height = preview.height;
 
-  drawScaled(state.image, dom.baseCanvas, true, state.fitMode, true);
+  drawScaled(state.image, dom.baseCanvas, true, state.fitMode, true, false, "none", cropRect);
   drawScaled(
     state.image,
     dom.resultCanvas,
@@ -622,7 +781,8 @@ async function render() {
     state.fitMode,
     true,
     false,
-    enhancementFilter,
+    visualFilter,
+    cropRect,
   );
 
   if (state.method === "detail") {
@@ -664,6 +824,30 @@ function setEnhanceMode(mode) {
   state.enhanceMode = ["off", "auto", "vivid"].includes(mode) ? mode : "off";
   updateEnhanceControls();
   scheduleRender();
+}
+
+function setFilterPreset(preset) {
+  state.filterPreset = ["none", "warm", "cool", "mono", "cinematic"].includes(preset)
+    ? preset
+    : "none";
+  updateFilterControls();
+  scheduleRender();
+}
+
+function setActiveTool(tool) {
+  state.activeTool = ["crop", "upscale", "enhance", "filters", "export"].includes(tool)
+    ? tool
+    : "crop";
+
+  dom.toolButtons.forEach((button) => {
+    const isActive = button.dataset.tool === state.activeTool;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+
+  dom.toolPanels.forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.toolPanel === state.activeTool);
+  });
 }
 
 function setView(view) {
@@ -747,7 +931,8 @@ async function downloadResult() {
   const baseName = state.file?.name?.replace(/\.[^.]+$/, "") || "upscaled";
   const quality = state.format === "image/png" ? undefined : state.quality;
   const output = getOutputSize();
-  const enhancementFilter = getEnhancementFilter();
+  const cropRect = getSourceCropRect();
+  const visualFilter = getVisualFilter();
   const exportCanvas = document.createElement("canvas");
 
   setBusy(true);
@@ -767,7 +952,8 @@ async function downloadResult() {
       state.fitMode,
       canUseTiledDetail,
       state.method === "detail" && !canUseTiledDetail,
-      enhancementFilter,
+      visualFilter,
+      cropRect,
     );
 
     if (canUseTiledDetail) {
@@ -807,6 +993,9 @@ async function downloadResult() {
 dom.openButton.addEventListener("click", () => dom.fileInput.click());
 dom.languageButtons.forEach((button) => {
   button.addEventListener("click", () => setLocale(button.dataset.locale));
+});
+dom.toolButtons.forEach((button) => {
+  button.addEventListener("click", () => setActiveTool(button.dataset.tool));
 });
 dom.fileInput.addEventListener("change", (event) => {
   loadFile(event.target.files[0]);
@@ -862,6 +1051,16 @@ document.querySelectorAll("[data-view]").forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
 });
 
+dom.resetCropButton.addEventListener("click", resetCrop);
+dom.cropXRange.addEventListener("input", (event) => setCropValue("x", event.target.value));
+dom.cropYRange.addEventListener("input", (event) => setCropValue("y", event.target.value));
+dom.cropWidthRange.addEventListener("input", (event) =>
+  setCropValue("width", event.target.value),
+);
+dom.cropHeightRange.addEventListener("input", (event) =>
+  setCropValue("height", event.target.value),
+);
+
 dom.methodSelect.addEventListener("change", (event) => {
   state.method = event.target.value;
   dom.sharpnessRange.disabled = state.method !== "detail";
@@ -880,6 +1079,13 @@ document.querySelectorAll("[data-enhance]").forEach((button) => {
 dom.enhanceStrengthRange.addEventListener("input", (event) => {
   state.enhanceStrength = Number(event.target.value);
   updateEnhanceControls();
+  scheduleRender();
+});
+
+dom.filterSelect.addEventListener("change", (event) => setFilterPreset(event.target.value));
+dom.filterStrengthRange.addEventListener("input", (event) => {
+  state.filterStrength = Number(event.target.value);
+  updateFilterControls();
   scheduleRender();
 });
 
@@ -910,8 +1116,11 @@ dom.zoomOutButton.addEventListener("click", () => changeZoom(-1));
 
 window.addEventListener("resize", updateFrameSize);
 updateSplit(dom.splitRange.value);
+setActiveTool(state.activeTool);
+updateCropControls();
 syncSizeControls();
 updateStats();
 setLocale(state.locale);
 updateEnhanceControls();
+updateFilterControls();
 dom.qualityRange.disabled = state.format === "image/png";
