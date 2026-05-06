@@ -281,6 +281,10 @@ output {
   grid-template-columns: repeat(4, 1fr);
 }
 
+.segmented.three {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 .segment,
 .tab {
   padding: 0 12px;

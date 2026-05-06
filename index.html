@@ -85,6 +85,23 @@
 
           <section class="control-group">
             <div class="label-row">
+              <label data-i18n="photoEnhance">화질 개선</label>
+              <output id="enhanceOutput">꺼짐</output>
+            </div>
+            <div class="segmented three" role="group" aria-label="화질 개선" data-i18n-aria-label="enhanceAria">
+              <button type="button" class="segment active" data-enhance="off" data-i18n="enhanceOff">끄기</button>
+              <button type="button" class="segment" data-enhance="auto" data-i18n="enhanceAuto">자동</button>
+              <button type="button" class="segment" data-enhance="vivid" data-i18n="enhanceVivid">선명하게</button>
+            </div>
+            <div class="label-row">
+              <label for="enhanceStrengthRange" data-i18n="enhanceStrength">개선 강도</label>
+              <output id="enhanceStrengthOutput">55%</output>
+            </div>
+            <input id="enhanceStrengthRange" type="range" min="0" max="100" value="55" disabled />
+          </section>
+
+          <section class="control-group">
+            <div class="label-row">
               <label for="sharpnessRange" data-i18n="sharpness">선명도</label>
               <output id="sharpnessOutput">42</output>
             </div>

@@ -24,6 +24,12 @@ const messages = {
     coverMode: "채우기",
     containMode: "전체",
     stretchMode: "늘이기",
+    photoEnhance: "화질 개선",
+    enhanceAria: "화질 개선",
+    enhanceOff: "끄기",
+    enhanceAuto: "자동",
+    enhanceVivid: "선명하게",
+    enhanceStrength: "개선 강도",
     sharpness: "선명도",
     fileFormat: "파일 형식",
     quality: "품질",
@@ -76,6 +82,12 @@ const messages = {
     coverMode: "Cover",
     containMode: "Contain",
     stretchMode: "Stretch",
+    photoEnhance: "Quality Boost",
+    enhanceAria: "Quality enhancement",
+    enhanceOff: "Off",
+    enhanceAuto: "Auto",
+    enhanceVivid: "Vivid",
+    enhanceStrength: "Boost Strength",
     sharpness: "Sharpness",
     fileFormat: "File Format",
     quality: "Quality",
@@ -122,6 +134,8 @@ const state = {
   customHeight: 10500,
   method: "detail",
   fitMode: "cover",
+  enhanceMode: "off",
+  enhanceStrength: 55,
   sharpness: 42,
   format: "image/png",
   quality: 0.92,
@@ -145,6 +159,9 @@ const dom = {
   heightInput: document.querySelector("#heightInput"),
   methodSelect: document.querySelector("#methodSelect"),
   fitModeSelect: document.querySelector("#fitModeSelect"),
+  enhanceOutput: document.querySelector("#enhanceOutput"),
+  enhanceStrengthRange: document.querySelector("#enhanceStrengthRange"),
+  enhanceStrengthOutput: document.querySelector("#enhanceStrengthOutput"),
   sharpnessRange: document.querySelector("#sharpnessRange"),
   sharpnessOutput: document.querySelector("#sharpnessOutput"),
   formatSelect: document.querySelector("#formatSelect"),
@@ -205,6 +222,7 @@ function setLocale(locale) {
   if (!state.file) {
     dom.fileName.textContent = translate("noFile");
   }
+  updateEnhanceControls();
 
   if (state.statusKey) {
     setStatusKey(state.statusKey, state.statusParams);
@@ -262,6 +280,47 @@ function getPreviewSize(output) {
     width: Math.max(1, Math.round(output.width * ratio)),
     height: Math.max(1, Math.round(output.height * ratio)),
   };
+}
+
+function getEnhancementFilter() {
+  if (state.enhanceMode === "off" || state.enhanceStrength <= 0) return "none";
+
+  const amount = state.enhanceStrength / 100;
+  const profiles = {
+    auto: {
+      brightness: 1 + amount * 0.025,
+      contrast: 1 + amount * 0.16,
+      saturate: 1 + amount * 0.12,
+    },
+    vivid: {
+      brightness: 1 + amount * 0.015,
+      contrast: 1 + amount * 0.24,
+      saturate: 1 + amount * 0.28,
+    },
+  };
+  const profile = profiles[state.enhanceMode] || profiles.auto;
+
+  return [
+    `brightness(${profile.brightness.toFixed(3)})`,
+    `contrast(${profile.contrast.toFixed(3)})`,
+    `saturate(${profile.saturate.toFixed(3)})`,
+  ].join(" ");
+}
+
+function updateEnhanceControls() {
+  dom.enhanceOutput.textContent = translate(
+    state.enhanceMode === "off"
+      ? "enhanceOff"
+      : state.enhanceMode === "vivid"
+        ? "enhanceVivid"
+        : "enhanceAuto",
+  );
+  dom.enhanceStrengthOutput.textContent = `${state.enhanceStrength}%`;
+  dom.enhanceStrengthRange.disabled = state.enhanceMode === "off";
+
+  document.querySelectorAll("[data-enhance]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.enhance === state.enhanceMode);
+  });
 }
 
 function syncSizeControls() {
@@ -407,12 +466,16 @@ function drawScaled(
   fitMode,
   willReadFrequently = false,
   fastDetail = false,
+  enhancementFilter = "none",
 ) {
   const ctx = canvas.getContext("2d", { willReadFrequently });
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.imageSmoothingEnabled = smoothing;
   ctx.imageSmoothingQuality = "high";
-  ctx.filter = fastDetail ? "contrast(1.035) saturate(1.015)" : "none";
+  const filters = [];
+  if (enhancementFilter !== "none") filters.push(enhancementFilter);
+  if (fastDetail) filters.push("contrast(1.035) saturate(1.015)");
+  ctx.filter = filters.length ? filters.join(" ") : "none";
   const rect = getDrawRect(source, canvas.width, canvas.height, fitMode);
   ctx.drawImage(source, rect.sx, rect.sy, rect.sw, rect.sh, rect.dx, rect.dy, rect.dw, rect.dh);
   ctx.filter = "none";
@@ -525,6 +588,7 @@ async function render() {
   const renderId = (state.renderId += 1);
   const output = getOutputSize();
   const preview = getPreviewSize(output);
+  const enhancementFilter = getEnhancementFilter();
   updateStats();
 
   if (
@@ -551,7 +615,15 @@ async function render() {
   dom.resultCanvas.height = preview.height;
 
   drawScaled(state.image, dom.baseCanvas, true, state.fitMode, true);
-  drawScaled(state.image, dom.resultCanvas, state.method !== "pixel", state.fitMode, true);
+  drawScaled(
+    state.image,
+    dom.resultCanvas,
+    state.method !== "pixel",
+    state.fitMode,
+    true,
+    false,
+    enhancementFilter,
+  );
 
   if (state.method === "detail") {
     await waitFrame();
@@ -585,6 +657,12 @@ function setCustomSize(width, height) {
   state.customHeight = clampDimension(height);
   syncSizeControls();
   updateStats();
+  scheduleRender();
+}
+
+function setEnhanceMode(mode) {
+  state.enhanceMode = ["off", "auto", "vivid"].includes(mode) ? mode : "off";
+  updateEnhanceControls();
   scheduleRender();
 }
 
@@ -669,6 +747,7 @@ async function downloadResult() {
   const baseName = state.file?.name?.replace(/\.[^.]+$/, "") || "upscaled";
   const quality = state.format === "image/png" ? undefined : state.quality;
   const output = getOutputSize();
+  const enhancementFilter = getEnhancementFilter();
   const exportCanvas = document.createElement("canvas");
 
   setBusy(true);
@@ -688,6 +767,7 @@ async function downloadResult() {
       state.fitMode,
       canUseTiledDetail,
       state.method === "detail" && !canUseTiledDetail,
+      enhancementFilter,
     );
 
     if (canUseTiledDetail) {
@@ -793,6 +873,16 @@ dom.fitModeSelect.addEventListener("change", (event) => {
   scheduleRender();
 });
 
+document.querySelectorAll("[data-enhance]").forEach((button) => {
+  button.addEventListener("click", () => setEnhanceMode(button.dataset.enhance));
+});
+
+dom.enhanceStrengthRange.addEventListener("input", (event) => {
+  state.enhanceStrength = Number(event.target.value);
+  updateEnhanceControls();
+  scheduleRender();
+});
+
 dom.sharpnessRange.addEventListener("input", (event) => {
   state.sharpness = Number(event.target.value);
   dom.sharpnessOutput.textContent = state.sharpness;
@@ -823,4 +913,5 @@ updateSplit(dom.splitRange.value);
 syncSizeControls();
 updateStats();
 setLocale(state.locale);
+updateEnhanceControls();
 dom.qualityRange.disabled = state.format === "image/png";
