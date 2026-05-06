@@ -23,8 +23,8 @@ const messages = {
     reset: "초기화",
     cropLeft: "왼쪽",
     cropTop: "위",
-    cropWidth: "너비",
-    cropHeight: "높이",
+    cropRight: "오른쪽",
+    cropBottom: "아래",
     outputSize: "출력 크기",
     scaleAria: "업스케일 배율",
     method: "방식",
@@ -99,8 +99,8 @@ const messages = {
     reset: "Reset",
     cropLeft: "Left",
     cropTop: "Top",
-    cropWidth: "Width",
-    cropHeight: "Height",
+    cropRight: "Right",
+    cropBottom: "Bottom",
     outputSize: "Output Size",
     scaleAria: "Upscale ratio",
     method: "Method",
@@ -169,7 +169,7 @@ const state = {
   scale: 2,
   customWidth: 13500,
   customHeight: 10500,
-  crop: { x: 0, y: 0, width: 100, height: 100 },
+  crop: { left: 0, top: 0, right: 0, bottom: 0 },
   method: "detail",
   fitMode: "cover",
   enhanceMode: "off",
@@ -346,21 +346,21 @@ function clampPercent(value, min = 0, max = 100) {
 }
 
 function normalizeCrop() {
-  state.crop.width = clampPercent(state.crop.width, 1, 100);
-  state.crop.height = clampPercent(state.crop.height, 1, 100);
-  state.crop.x = clampPercent(state.crop.x, 0, 100 - state.crop.width);
-  state.crop.y = clampPercent(state.crop.y, 0, 100 - state.crop.height);
-  state.crop.width = Math.min(state.crop.width, 100 - state.crop.x);
-  state.crop.height = Math.min(state.crop.height, 100 - state.crop.y);
+  state.crop.left = clampPercent(state.crop.left, 0, 99);
+  state.crop.top = clampPercent(state.crop.top, 0, 99);
+  state.crop.right = clampPercent(state.crop.right, 0, 99 - state.crop.left);
+  state.crop.bottom = clampPercent(state.crop.bottom, 0, 99 - state.crop.top);
 }
 
 function getSourceCropRect(source = state.image) {
   if (!source) return { x: 0, y: 0, width: 0, height: 0 };
   normalizeCrop();
-  const width = Math.max(1, source.width * (state.crop.width / 100));
-  const height = Math.max(1, source.height * (state.crop.height / 100));
-  const x = Math.min(source.width - width, source.width * (state.crop.x / 100));
-  const y = Math.min(source.height - height, source.height * (state.crop.y / 100));
+  const widthPercent = 100 - state.crop.left - state.crop.right;
+  const heightPercent = 100 - state.crop.top - state.crop.bottom;
+  const width = Math.max(1, source.width * (widthPercent / 100));
+  const height = Math.max(1, source.height * (heightPercent / 100));
+  const x = Math.min(source.width - width, source.width * (state.crop.left / 100));
+  const y = Math.min(source.height - height, source.height * (state.crop.top / 100));
   return { x, y, width, height };
 }
 
@@ -371,29 +371,29 @@ function getEffectiveSourceSize() {
 
 function updateCropControls() {
   normalizeCrop();
-  dom.cropXRange.max = String(100 - state.crop.width);
-  dom.cropYRange.max = String(100 - state.crop.height);
-  dom.cropWidthRange.max = String(100 - state.crop.x);
-  dom.cropHeightRange.max = String(100 - state.crop.y);
-  dom.cropXRange.value = String(state.crop.x);
-  dom.cropYRange.value = String(state.crop.y);
-  dom.cropWidthRange.value = String(state.crop.width);
-  dom.cropHeightRange.value = String(state.crop.height);
-  dom.cropXOutput.textContent = `${state.crop.x}%`;
-  dom.cropYOutput.textContent = `${state.crop.y}%`;
-  dom.cropWidthOutput.textContent = `${state.crop.width}%`;
-  dom.cropHeightOutput.textContent = `${state.crop.height}%`;
+  dom.cropXRange.max = String(99 - state.crop.right);
+  dom.cropYRange.max = String(99 - state.crop.bottom);
+  dom.cropWidthRange.max = String(99 - state.crop.left);
+  dom.cropHeightRange.max = String(99 - state.crop.top);
+  dom.cropXRange.value = String(state.crop.left);
+  dom.cropYRange.value = String(state.crop.top);
+  dom.cropWidthRange.value = String(state.crop.right);
+  dom.cropHeightRange.value = String(state.crop.bottom);
+  dom.cropXOutput.textContent = `${state.crop.left}%`;
+  dom.cropYOutput.textContent = `${state.crop.top}%`;
+  dom.cropWidthOutput.textContent = `${state.crop.right}%`;
+  dom.cropHeightOutput.textContent = `${state.crop.bottom}%`;
 }
 
 function setCropValue(key, value) {
-  state.crop[key] = clampPercent(value, key === "width" || key === "height" ? 1 : 0, 100);
+  state.crop[key] = clampPercent(value, 0, 99);
   updateCropControls();
   updateStats();
   scheduleRender();
 }
 
 function resetCrop() {
-  state.crop = { x: 0, y: 0, width: 100, height: 100 };
+  state.crop = { left: 0, top: 0, right: 0, bottom: 0 };
   updateCropControls();
   updateStats();
   scheduleRender();
@@ -1052,13 +1052,13 @@ document.querySelectorAll("[data-view]").forEach((button) => {
 });
 
 dom.resetCropButton.addEventListener("click", resetCrop);
-dom.cropXRange.addEventListener("input", (event) => setCropValue("x", event.target.value));
-dom.cropYRange.addEventListener("input", (event) => setCropValue("y", event.target.value));
+dom.cropXRange.addEventListener("input", (event) => setCropValue("left", event.target.value));
+dom.cropYRange.addEventListener("input", (event) => setCropValue("top", event.target.value));
 dom.cropWidthRange.addEventListener("input", (event) =>
-  setCropValue("width", event.target.value),
+  setCropValue("right", event.target.value),
 );
 dom.cropHeightRange.addEventListener("input", (event) =>
-  setCropValue("height", event.target.value),
+  setCropValue("bottom", event.target.value),
 );
 
 dom.methodSelect.addEventListener("change", (event) => {
