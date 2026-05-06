@@ -322,6 +322,10 @@ output {
   grid-template-columns: repeat(4, 1fr);
 }
 
+.segmented.output-presets {
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+}
+
 .segmented.three {
   grid-template-columns: repeat(3, 1fr);
 }
