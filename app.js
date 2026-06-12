@@ -167,6 +167,7 @@ const state = {
   activeTool: "crop",
   sizeMode: "scale",
   scale: 2,
+  targetHeight: 1080,
   customWidth: 13500,
   customHeight: 10500,
   crop: { left: 0, top: 0, right: 0, bottom: 0 },
@@ -322,6 +323,12 @@ function clampDimension(value) {
 function getOutputSize() {
   if (!state.image) return { width: 0, height: 0, pixels: 0 };
   const source = getEffectiveSourceSize();
+  if (state.sizeMode === "targetHeight") {
+    const height = clampDimension(state.targetHeight);
+    const width = clampDimension(source.width * (height / source.height));
+    return { width, height, pixels: width * height };
+  }
+
   const width =
     state.sizeMode === "custom" ? state.customWidth : Math.round(source.width * state.scale);
   const height =
@@ -480,10 +487,17 @@ function updateFilterControls() {
 
 function syncSizeControls() {
   const output = getOutputSize();
-  dom.scaleOutput.textContent =
-    state.sizeMode === "scale"
-      ? `${state.scale}x`
-      : `${state.customWidth.toLocaleString()} x ${state.customHeight.toLocaleString()}`;
+  if (state.sizeMode === "scale") {
+    dom.scaleOutput.textContent = `${state.scale}x`;
+  } else if (state.sizeMode === "targetHeight") {
+    dom.scaleOutput.textContent =
+      output.width && output.height
+        ? `${output.width.toLocaleString()} x ${output.height.toLocaleString()}`
+        : `${state.targetHeight}p`;
+  } else {
+    dom.scaleOutput.textContent =
+      `${state.customWidth.toLocaleString()} x ${state.customHeight.toLocaleString()}`;
+  }
 
   document.querySelectorAll("[data-scale]").forEach((button) => {
     button.classList.toggle(
@@ -498,6 +512,14 @@ function syncSizeControls() {
       state.sizeMode === "custom" &&
         Number(button.dataset.outputWidth) === state.customWidth &&
         Number(button.dataset.outputHeight) === state.customHeight,
+    );
+  });
+
+  document.querySelectorAll("[data-target-height]").forEach((button) => {
+    button.classList.toggle(
+      "active",
+      state.sizeMode === "targetHeight" &&
+        Number(button.dataset.targetHeight) === state.targetHeight,
     );
   });
 
@@ -811,6 +833,14 @@ function setScale(scale) {
   scheduleRender();
 }
 
+function setTargetHeight(height) {
+  state.sizeMode = "targetHeight";
+  state.targetHeight = clampDimension(height);
+  syncSizeControls();
+  updateStats();
+  scheduleRender();
+}
+
 function setCustomSize(width, height) {
   state.sizeMode = "custom";
   state.customWidth = clampDimension(width);
@@ -1036,6 +1066,12 @@ document.querySelectorAll("[data-scale]").forEach((button) => {
 document.querySelectorAll("[data-output-width]").forEach((button) => {
   button.addEventListener("click", () => {
     setCustomSize(Number(button.dataset.outputWidth), Number(button.dataset.outputHeight));
+  });
+});
+
+document.querySelectorAll("[data-target-height]").forEach((button) => {
+  button.addEventListener("click", () => {
+    setTargetHeight(Number(button.dataset.targetHeight));
   });
 });
 
