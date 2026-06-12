@@ -32,8 +32,8 @@ const messages = {
     smoothMode: "부드럽게",
     pixelMode: "픽셀 아트",
     fitMode: "비율 처리",
-    coverMode: "채우기",
-    containMode: "전체",
+    coverMode: "채우기 (잘림)",
+    containMode: "전체 (안 잘림)",
     stretchMode: "늘이기",
     photoEnhance: "화질 개선",
     enhanceAria: "화질 개선",
@@ -108,8 +108,8 @@ const messages = {
     smoothMode: "Smooth",
     pixelMode: "Pixel Art",
     fitMode: "Fit Mode",
-    coverMode: "Cover",
-    containMode: "Contain",
+    coverMode: "Cover (crop)",
+    containMode: "Fit All",
     stretchMode: "Stretch",
     photoEnhance: "Quality Boost",
     enhanceAria: "Quality enhancement",
@@ -172,7 +172,7 @@ const state = {
   customHeight: 10500,
   crop: { left: 0, top: 0, right: 0, bottom: 0 },
   method: "detail",
-  fitMode: "cover",
+  fitMode: "contain",
   enhanceMode: "off",
   enhanceStrength: 55,
   filterPreset: "none",
@@ -841,10 +841,14 @@ function setTargetHeight(height) {
   scheduleRender();
 }
 
-function setCustomSize(width, height) {
+function setCustomSize(width, height, fitMode = null) {
   state.sizeMode = "custom";
   state.customWidth = clampDimension(width);
   state.customHeight = clampDimension(height);
+  if (["cover", "contain", "stretch"].includes(fitMode)) {
+    state.fitMode = fitMode;
+    dom.fitModeSelect.value = state.fitMode;
+  }
   syncSizeControls();
   updateStats();
   scheduleRender();
@@ -1065,7 +1069,11 @@ document.querySelectorAll("[data-scale]").forEach((button) => {
 
 document.querySelectorAll("[data-output-width]").forEach((button) => {
   button.addEventListener("click", () => {
-    setCustomSize(Number(button.dataset.outputWidth), Number(button.dataset.outputHeight));
+    setCustomSize(
+      Number(button.dataset.outputWidth),
+      Number(button.dataset.outputHeight),
+      button.dataset.fitMode,
+    );
   });
 });
 
@@ -1154,6 +1162,7 @@ window.addEventListener("resize", updateFrameSize);
 updateSplit(dom.splitRange.value);
 setActiveTool(state.activeTool);
 updateCropControls();
+dom.fitModeSelect.value = state.fitMode;
 syncSizeControls();
 updateStats();
 setLocale(state.locale);

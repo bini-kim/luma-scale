@@ -97,7 +97,13 @@
                 <button type="button" class="segment" data-target-height="1080">
                   1080p
                 </button>
-                <button type="button" class="segment" data-output-width="13500" data-output-height="10500">
+                <button
+                  type="button"
+                  class="segment"
+                  data-output-width="13500"
+                  data-output-height="10500"
+                  data-fit-mode="contain"
+                >
                   13.5K
                 </button>
               </div>
@@ -125,8 +131,8 @@
             <section class="control-group">
               <label for="fitModeSelect" data-i18n="fitMode">비율 처리</label>
               <select id="fitModeSelect">
-                <option value="cover" data-i18n="coverMode">채우기</option>
-                <option value="contain" data-i18n="containMode">전체</option>
+                <option value="contain" selected data-i18n="containMode">전체 (안 잘림)</option>
+                <option value="cover" data-i18n="coverMode">채우기 (잘림)</option>
                 <option value="stretch" data-i18n="stretchMode">늘이기</option>
               </select>
             </section>

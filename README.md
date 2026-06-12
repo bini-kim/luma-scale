@@ -13,7 +13,7 @@ LumaScale is a browser-based photo editor. Crop, upscale, enhance, filter, and e
 - 디테일 보정, 부드럽게, 픽셀 아트 모드
 - 자동/선명하게 화질 개선 프리셋과 강도 조절
 - 따뜻하게, 차갑게, 흑백, 시네마틱 필터
-- 채우기, 전체, 늘이기 비율 처리
+- 전체 보존, 채우기, 늘이기 비율 처리
 - 비교 슬라이더와 결과/원본 보기
 - PNG, JPEG, WebP 내보내기
 
@@ -26,7 +26,7 @@ LumaScale is a browser-based photo editor. Crop, upscale, enhance, filter, and e
 - Detail Boost, Smooth, and Pixel Art modes
 - Auto/Vivid quality enhancement presets with strength control
 - Warm, Cool, Mono, and Cinematic filters
-- Cover, Contain, and Stretch fit modes
+- Fit All, Cover, and Stretch fit modes
 - Compare slider with result/original views
 - Export as PNG, JPEG, or WebP
 - Korean/English language toggle
