@@ -4,7 +4,7 @@ const PREVIEW_MAX_PIXELS = 2200000;
 const DETAIL_EXPORT_MAX_PIXELS = 36000000;
 const DETAIL_TILE_ROWS = 128;
 const LOCALE_STORAGE_KEY = "lumaScaleLocale";
-const ZOOM_STEPS = [0.25, 0.5, 0.75, 1, 1.5, 2];
+const ZOOM_STEPS = [0.5, 0.75, 1, 1.5, 2, 3];
 
 const messages = {
   ko: {
@@ -168,6 +168,7 @@ const state = {
   sizeMode: "scale",
   scale: 2,
   targetHeight: 1080,
+  targetLongEdge: 13500,
   customWidth: 13500,
   customHeight: 10500,
   crop: { left: 0, top: 0, right: 0, bottom: 0 },
@@ -326,6 +327,14 @@ function getOutputSize() {
   if (state.sizeMode === "targetHeight") {
     const height = clampDimension(state.targetHeight);
     const width = clampDimension(source.width * (height / source.height));
+    return { width, height, pixels: width * height };
+  }
+
+  if (state.sizeMode === "targetLongEdge") {
+    const edge = clampDimension(state.targetLongEdge);
+    const ratio = edge / Math.max(source.width, source.height);
+    const width = clampDimension(source.width * ratio);
+    const height = clampDimension(source.height * ratio);
     return { width, height, pixels: width * height };
   }
 
@@ -494,6 +503,11 @@ function syncSizeControls() {
       output.width && output.height
         ? `${output.width.toLocaleString()} x ${output.height.toLocaleString()}`
         : `${state.targetHeight}p`;
+  } else if (state.sizeMode === "targetLongEdge") {
+    dom.scaleOutput.textContent =
+      output.width && output.height
+        ? `${output.width.toLocaleString()} x ${output.height.toLocaleString()}`
+        : `${(state.targetLongEdge / 1000).toFixed(1)}K`;
   } else {
     dom.scaleOutput.textContent =
       `${state.customWidth.toLocaleString()} x ${state.customHeight.toLocaleString()}`;
@@ -520,6 +534,14 @@ function syncSizeControls() {
       "active",
       state.sizeMode === "targetHeight" &&
         Number(button.dataset.targetHeight) === state.targetHeight,
+    );
+  });
+
+  document.querySelectorAll("[data-target-long-edge]").forEach((button) => {
+    button.classList.toggle(
+      "active",
+      state.sizeMode === "targetLongEdge" &&
+        Number(button.dataset.targetLongEdge) === state.targetLongEdge,
     );
   });
 
@@ -828,6 +850,7 @@ function scheduleRender() {
 function setScale(scale) {
   state.sizeMode = "scale";
   state.scale = scale;
+  state.zoom = "fit";
   syncSizeControls();
   updateStats();
   scheduleRender();
@@ -836,6 +859,16 @@ function setScale(scale) {
 function setTargetHeight(height) {
   state.sizeMode = "targetHeight";
   state.targetHeight = clampDimension(height);
+  state.zoom = "fit";
+  syncSizeControls();
+  updateStats();
+  scheduleRender();
+}
+
+function setTargetLongEdge(edge) {
+  state.sizeMode = "targetLongEdge";
+  state.targetLongEdge = clampDimension(edge);
+  state.zoom = "fit";
   syncSizeControls();
   updateStats();
   scheduleRender();
@@ -845,6 +878,7 @@ function setCustomSize(width, height, fitMode = null) {
   state.sizeMode = "custom";
   state.customWidth = clampDimension(width);
   state.customHeight = clampDimension(height);
+  state.zoom = "fit";
   if (["cover", "contain", "stretch"].includes(fitMode)) {
     state.fitMode = fitMode;
     dom.fitModeSelect.value = state.fitMode;
@@ -909,27 +943,36 @@ function updateFrameSize() {
   let width;
   let height;
 
+  const fittedWidth = Math.min(maxWidth, maxHeight * aspect);
+  let fittedHeight = fittedWidth / aspect;
+  let fittedFrameWidth = fittedWidth;
+  if (fittedHeight > maxHeight) {
+    fittedHeight = maxHeight;
+    fittedFrameWidth = fittedHeight * aspect;
+  }
+
   if (state.zoom === "fit") {
-    width = Math.min(maxWidth, maxHeight * aspect);
-    height = width / aspect;
-    if (height > maxHeight) {
-      height = maxHeight;
-      width = height * aspect;
-    }
+    width = fittedFrameWidth;
+    height = fittedHeight;
   } else {
-    width = output.width * state.zoom;
-    height = output.height * state.zoom;
+    width = fittedFrameWidth * state.zoom;
+    height = fittedHeight * state.zoom;
   }
 
   dom.compareFrame.style.width = `${Math.max(180, width)}px`;
   dom.compareFrame.style.height = `${Math.max(180, height)}px`;
+
+  if (state.zoom === "fit") {
+    dom.stage.scrollLeft = 0;
+    dom.stage.scrollTop = 0;
+  }
 }
 
 function changeZoom(direction) {
   if (!state.image) return;
 
   if (state.zoom === "fit") {
-    state.zoom = direction > 0 ? 0.75 : 0.5;
+    state.zoom = direction > 0 ? 1.5 : 0.75;
   } else {
     const index = ZOOM_STEPS.findIndex((step) => step === state.zoom);
     const fallbackIndex = ZOOM_STEPS.findIndex((step) => step >= state.zoom);
@@ -944,6 +987,13 @@ function changeZoom(direction) {
   } else {
     setStatus(`${Math.round(state.zoom * 100)}%`);
   }
+}
+
+function getOutputSizeLabel(output) {
+  if (state.sizeMode === "scale") return `${state.scale}x`;
+  if (state.sizeMode === "targetHeight") return `${state.targetHeight}p`;
+  if (state.sizeMode === "targetLongEdge") return `${state.targetLongEdge}`;
+  return `${output.width}x${output.height}`;
 }
 
 function getExtension(mimeType) {
@@ -1005,10 +1055,7 @@ async function downloadResult() {
 
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    const sizeLabel =
-      state.sizeMode === "custom"
-        ? `${output.width}x${output.height}`
-        : `${state.scale}x`;
+    const sizeLabel = getOutputSizeLabel(output);
     link.href = url;
     link.download = `${baseName}-${sizeLabel}.${extension}`;
     link.click();
@@ -1080,6 +1127,12 @@ document.querySelectorAll("[data-output-width]").forEach((button) => {
 document.querySelectorAll("[data-target-height]").forEach((button) => {
   button.addEventListener("click", () => {
     setTargetHeight(Number(button.dataset.targetHeight));
+  });
+});
+
+document.querySelectorAll("[data-target-long-edge]").forEach((button) => {
+  button.addEventListener("click", () => {
+    setTargetLongEdge(Number(button.dataset.targetLongEdge));
   });
 });
 
